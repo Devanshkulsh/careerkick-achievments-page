@@ -77,26 +77,21 @@ const About = () => {
     let ticking = false;
 
     const measure = () => {
-      const containerWidth =
-        track.parentElement?.offsetWidth || window.innerWidth;
+      const containerWidth = window.innerWidth;
       const trackWidth = track.scrollWidth;
-      const maxTranslate = Math.max(0, trackWidth - containerWidth);
+      const maxTranslate = trackWidth - containerWidth;
 
-      // Force a minimum scroll distance so desktop users can comfortably scroll through 
-      // the active states even if the cards fit almost entirely on the screen.
-      const minScroll = window.innerHeight * 1.5;
-      const scrollDistance = Math.max(maxTranslate, minScroll);
+      // Increased scroll distance to ensure the last card "rests" in place
+      const scrollDistance = Math.max(maxTranslate, window.innerHeight * 3);
 
-      // Calculate how tall the section needs to be to accommodate the scroll
       const nextHeight = window.innerHeight + scrollDistance;
       sectionHeightRef.current = nextHeight;
       setSectionHeight(nextHeight);
     };
 
     const update = () => {
-      const containerWidth =
-        track.parentElement?.offsetWidth || window.innerWidth;
       const viewportHeight = window.innerHeight;
+      const containerWidth = window.innerWidth;
       const trackWidth = track.scrollWidth;
       const maxTranslate = Math.max(0, trackWidth - containerWidth);
 
@@ -108,20 +103,21 @@ const About = () => {
         (sectionHeightRef.current || viewportHeight) - viewportHeight,
       );
 
-      // Calculate progress (0 to 1) based on vertical scroll
+      // We use a "clamped" progress for the horizontal movement
       const raw = (window.scrollY - sectionTop) / scrollable;
       const progress = Math.min(1, Math.max(0, raw));
 
-      // Translate vertical progress into horizontal movement
-      const nextX = progress * maxTranslate;
+      // Translate slightly faster than the scroll to ensure we finish
+      // horizontal movement before the section unlocks
+      const moveProgress = Math.min(1, progress * 1.1);
+      const nextX = moveProgress * maxTranslate;
       setTranslateX(nextX);
 
-      // Determine which step is active based on scroll progress
-      const nextActive = Math.min(
-        stepCount - 1,
-        Math.max(0, Math.round(progress * (stepCount - 1))),
-      );
-      setActive(nextActive);
+      // Logic to determine active card with a buffer at the end
+      const activeProgress = progress * (stepCount - 0.2);
+      const nextActive = Math.min(stepCount - 1, Math.floor(activeProgress));
+
+      setActive(nextActive >= 0 ? nextActive : 0);
     };
 
     const onScroll = () => {
@@ -155,15 +151,15 @@ const About = () => {
       id="about"
       ref={sectionRef}
       className="bg-background text-foreground relative"
-      style={{ height: sectionHeight || "300vh" }}
+      style={{ height: sectionHeight || "400vh" }}
     >
       <div
         ref={stickyRef}
-        className="sticky top-0 h-dvh overflow-hidden py-3 sm:py-4 md:py-6 lg:py-6"
+        className="sticky top-0 h-screen overflow-hidden flex flex-col py-4 sm:py-6"
       >
-        <div className="mx-auto h-full px-4 sm:px-6 md:px-8 lg:px-12 flex flex-col w-full">
+        <div className="mx-auto flex flex-col h-full w-full max-w-7xl px-4 sm:px-6 lg:px-12">
           {/* Header */}
-          <div className="mb-2 sm:mb-4 text-center shrink-0">
+          <div className="mb-4 text-center shrink-0">
             <p className="text-primary text-[10px] font-semibold uppercase tracking-[0.3em] sm:text-xs">
               About Us
             </p>
@@ -176,9 +172,9 @@ const About = () => {
             </p>
           </div>
 
-          {/* Active Image Window - Centered perfect square */}
-          <div className="mb-3 lg:mb-5 flex flex-col flex-1 min-h-62.5 sm:min-h-75 lg:min-h-[40vh] w-full items-center justify-center overflow-hidden">
-            <div className="border-primary/20 bg-black/40 relative flex-1 overflow-hidden rounded-2xl border shadow-[0_10px_40px_rgba(90,194,13,0.1)] aspect-square max-w-full">
+          {/* Active Image Window - Larger on Desktop */}
+          <div className="mb-4 flex flex-1 items-center justify-center overflow-hidden min-h-0">
+            <div className="border-primary/20 bg-black/40 relative h-full aspect-square max-h-[45vh] sm:max-h-[55vh] lg:max-h-[62vh] overflow-hidden rounded-2xl border shadow-[0_10px_40px_rgba(90,194,13,0.1)]">
               {steps.map((step, idx) => (
                 <img
                   key={step.id}
@@ -191,79 +187,79 @@ const About = () => {
                 />
               ))}
             </div>
-            <div className="text-foreground/60 mt-2 text-center text-[11px] sm:text-sm font-medium shrink-0">
-              Step {active + 1} of {steps.length}
-            </div>
+          </div>
+
+          <div className="text-foreground/60 mb-2 text-center text-[11px] sm:text-sm font-medium shrink-0">
+            Step {active + 1} of {steps.length}
           </div>
 
           {/* Horizontal Scrolling Timeline */}
-          <div className="relative shrink-0 h-65 sm:h-70 lg:h-75 w-full">
-            {/* Infinite Background Line - Spans the entire screen perfectly behind the circles */}
+          <div className="relative shrink-0 h-fit w-full mb-6">
             <div className="bg-primary/25 pointer-events-none absolute top-8 sm:top-8.5 h-0.5 w-screen left-1/2 -translate-x-1/2 z-0" />
 
-            {/* Removed overflow-hidden so the cards and shadow-glow smoothly glide through the gutters */}
-            <div className="h-full pt-4 pb-2 sm:pb-4 z-10 relative">
+            <div className="h-full pt-4 relative">
               <div
                 ref={trackRef}
-                className="flex gap-6 h-full will-change-transform transition-transform duration-250 ease-out"
+                className="flex will-change-transform transition-transform duration-500 ease-out"
                 style={{ transform: `translate3d(-${translateX}px, 0, 0)` }}
               >
                 {steps.map((step, index) => (
                   <div
                     key={step.id}
-                    /* MATHEMATICALLY PERFECT MOBILE WIDTH: Exact container width so only 1 card shows */
-                    className="w-[calc(100vw-32px)] min-w-[calc(100vw-32px)] sm:w-[85vw] sm:min-w-105 lg:max-w-125 lg:min-w-125 shrink-0 flex flex-col h-full"
+                    className="w-screen min-w-screen sm:w-screen sm:min-w-screen lg:w-screen lg:min-w-screen shrink-0 flex flex-col items-center"
                   >
-                    {/* Timeline Node */}
-                    <div className="mb-3 sm:mb-4 flex items-center gap-2 sm:gap-3 shrink-0 relative z-10">
-                      <div
-                        className={clsx(
-                          "z-10 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border transition-all duration-300",
-                          active === index
-                            ? "border-primary bg-primary text-black shadow-[0_0_0_6px_rgba(90,194,13,0.2)] scale-110"
-                            : "border-primary/35 bg-card text-primary scale-100",
-                        )}
-                      >
-                        <span className="text-[10px] sm:text-xs font-bold">
-                          {step.id}
+                    <div className="w-full max-w-[calc(100vw-32px)] sm:max-w-xl lg:max-w-2xl flex flex-col">
+                      {/* Timeline Node */}
+                      <div className="mb-4 flex items-center gap-2 sm:gap-3 shrink-0 relative z-10 justify-start sm:justify-center">
+                        <div
+                          className={clsx(
+                            "z-10 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border transition-all duration-300",
+                            active === index
+                              ? "border-primary bg-primary text-black shadow-[0_0_0_6px_rgba(90,194,13,0.2)] scale-110"
+                              : "border-primary/35 bg-card text-primary scale-100",
+                          )}
+                        >
+                          <span className="text-[10px] sm:text-xs font-bold">
+                            {step.id}
+                          </span>
+                        </div>
+                        <span className="bg-primary/10 text-primary rounded-full px-2 py-1 sm:px-3 sm:py-1 text-[10px] sm:text-xs uppercase tracking-wide font-semibold shadow-sm">
+                          {step.tag}
                         </span>
                       </div>
-                      <span className="bg-primary/10 text-primary rounded-full px-2 py-1 sm:px-3 sm:py-1 text-[10px] sm:text-xs uppercase tracking-wide font-semibold shadow-sm">
-                        {step.tag}
-                      </span>
-                    </div>
 
-                    {/* Card Content */}
-                    <div
-                      className={clsx(
-                        "border-primary/20 bg-card rounded-2xl border p-4 pb-8 sm:p-5 sm:pb-10 transition-all duration-500 h-full overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]",
-                        active === index
-                          ? "translate-y-0 opacity-100 shadow-[0_8px_30px_rgba(90,194,13,0.1)]"
-                          : "translate-y-4 opacity-40",
-                      )}
-                    >
-                      <h3 className="text-[17px] leading-snug font-semibold sm:text-xl md:text-2xl">
-                        {step.title}{" "}
-                        <span className="text-primary">{step.highlight}</span>
-                      </h3>
+                      {/* Card Content */}
+                      <div
+                        className={clsx(
+                          "border-primary/20 bg-card rounded-2xl border p-5 sm:p-8 transition-all duration-700 h-auto",
+                          active === index
+                            ? "translate-y-0 opacity-100 shadow-[0_8px_30px_rgba(90,194,13,0.1)] scale-100"
+                            : "translate-y-8 opacity-0 scale-95",
+                        )}
+                      >
+                        <h3 className="text-[18px] leading-snug font-semibold sm:text-2xl">
+                          {step.title}{" "}
+                          <span className="text-primary">{step.highlight}</span>
+                        </h3>
 
-                      <p className="text-muted-foreground mt-2 text-[13px] leading-relaxed sm:text-sm sm:leading-6">
-                        {step.description}
-                      </p>
+                        <p className="text-muted-foreground mt-2 text-[14px] leading-relaxed sm:text-base">
+                          {step.description}
+                        </p>
 
-                      <ul className="mt-3 space-y-2 sm:space-y-3 sm:mt-4">
-                        {step.points.map((point, i) => (
-                          <li
-                            key={i}
-                            className="text-foreground/80 flex items-start gap-2 sm:gap-3 text-left text-[12px] leading-tight sm:text-[14px] sm:leading-6"
-                          >
-                            <span className="border-primary/40 bg-primary/10 text-primary mt-px sm:mt-0.5 flex h-3.5 w-3.5 sm:h-5 sm:w-5 shrink-0 items-center justify-center rounded-full border text-[8px] sm:text-[10px] font-bold">
-                              {i + 1}
-                            </span>
-                            <span>{point}</span>
-                          </li>
-                        ))}
-                      </ul>
+                        <ul className="mt-4 space-y-3">
+                          {step.points.map((point, i) => (
+                            <li
+                              key={i}
+                              className="text-foreground/80 flex items-start gap-3 text-left text-[13px] sm:text-sm"
+                            >
+                              <span className="border-primary/40 bg-primary/10 text-primary mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold">
+                                {i + 1}
+                              </span>
+                              <span>{point}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     </div>
                   </div>
                 ))}

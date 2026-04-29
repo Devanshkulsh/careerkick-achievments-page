@@ -3,7 +3,7 @@ import Header from "./Header";
 
 const Hero = () => {
   return (
-    <div className="relative h-screen w-full">
+    <section id="home" className="relative h-screen w-full">
       <Plasma
         color="#5ac20d"
         speed={0.6}
@@ -36,7 +36,7 @@ const Hero = () => {
           </button>
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 

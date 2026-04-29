@@ -137,7 +137,8 @@ const Testimonials = () => {
   }, []);
 
   return (
-    <div
+    <section
+      id="testimonials"
       style={{ position: "relative" }}
       className="px-4 py-12 sm:px-6 md:px-12 md:py-24"
     >
@@ -161,7 +162,7 @@ const Testimonials = () => {
           ease="power3.out"
         />
       </div>
-    </div>
+    </section>
   );
 };
 
